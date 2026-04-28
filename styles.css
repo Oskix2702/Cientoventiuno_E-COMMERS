@@ -4,6 +4,9 @@
     --morado-principal: #A12AF2;
     --morado-oscuro: #310A5D;
     --morado-claro: #D4ADFC;
+    --blanco-puro: #ffffff;
+    --fuente-principal: 'Bebas Neue', sans-serif;
+    --fuente-acento:'The Nautigal', cursive;
 }
 
 body {
@@ -12,12 +15,14 @@ body {
 }
 
 .main-header {
+    font-family: var(--fuente-principal);
+    font-size: 1.2rem;
+    letter-spacing: px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 20px 5%;
     transition: all 0.4s ease-in-out;
-    
     background-color: rgba(13, 13, 13, 0.8); 
     backdrop-filter: blur(10px); 
     -webkit-backdrop-filter: blur(10px);
@@ -68,7 +73,7 @@ body {
     width: 100%;
     min-height: 100vh;
     background-color: var(--morado-oscuro, #310A5D);
-    background-image: url('../assets/WEBSITE_MAIN/Image_Front.png');
+    background-image: url('assets/WEBSITE_MAIN/Image_Front.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -88,40 +93,48 @@ body {
 }
 
 .hero-content {
-    position: relative;
-    z-index: 2;
-    color: var(--blanco-texto);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 100%;
+    padding: 0 20%; 
+    box-sizing: border-box;
+    z-index: 10;
 }
 
 .hero-content h1 {
+    font-family: var(--fuente-principal);
     font-size: 4rem;
-    font-weight: 900;
-    letter-spacing: 5px;
-    margin-bottom: 10px;
+    color: var(--blanco-puro);
+    letter-spacing: 4px;
+    margin-bottom: 0;
+    line-height: 1;
 }
 
-.hero-content h1 span {
-    color: var(--morado-principal);
-}
-
-.hero-content p {
-    font-size: 1.2rem;
-    margin-bottom: 30px;
-    color: var(--morado-claro);
+.hero-content .tagline {
+    font-family: 'The Nautigal', cursive;
+    font-size: 2.5rem;
+    color: #ffffff;
+    line-height: 0.5; 
+    margin-top: 5px;
+    margin-bottom: 3rem;
+    font-weight: 400;
 }
 
 .btn-main {
-    padding: 15px 40px;
+    font-family: var(--fuente-principal);
+    padding: 12px 35px;
+    font-size: 1.5rem;
     background-color: var(--morado-principal);
     color: white;
     text-decoration: none;
-    font-weight: bold;
-    text-transform: uppercase;
     border-radius: 50px;
-    transition: 0.3s;
+    letter-spacing: 1px;
 }
 
 .btn-main:hover {
     background-color: var(--morado-claro);
-    box-shadow: 0 0 20px var(--morado-principal);
+    box-shadow: 0 5px 15px rgba(100, 26, 230, 0.4);
 }

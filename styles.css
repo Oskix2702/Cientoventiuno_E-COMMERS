@@ -127,14 +127,17 @@ body {
     font-family: var(--fuente-principal);
     padding: 12px 35px;
     font-size: 1.5rem;
-    background-color: var(--morado-principal);
+    background-color: var(--morado-oscuro);
     color: white;
     text-decoration: none;
     border-radius: 50px;
     letter-spacing: 1px;
+    display: inline-block;
+    transition: all 0.3s ease;
 }
 
 .btn-main:hover {
-    background-color: var(--morado-claro);
-    box-shadow: 0 5px 15px rgba(100, 26, 230, 0.4);
+    background-color: var(--morado-principal);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
 }

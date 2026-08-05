@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Plus, Check } from 'lucide-react'
+import { Plus, Check, ImageOff } from 'lucide-react'
 import { products, formatCOP } from '../data/products'
 import { useCart } from '../store/cartStore'
 
 function ProductCard({ product }) {
   const add = useCart((s) => s.add)
   const [added, setAdded] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   const handleAdd = () => {
     add(product)
@@ -16,15 +17,22 @@ function ProductCard({ product }) {
   return (
     <article className="group relative flex flex-col overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60">
       <div className="relative aspect-[3/4] overflow-hidden bg-ink">
-        <img
-          src={product.image}
-          alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-        />
-        <span className="absolute left-3 top-3 bg-ink/80 px-3 py-1 font-display text-sm uppercase tracking-widest2 text-chalk ring-1 ring-white/15">
-          {product.category}
-        </span>
+        {imgError ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-plum/40">
+            <ImageOff size={40} className="text-white/30" />
+            <span className="font-display text-xl uppercase tracking-widest2 text-white/40">
+              CIENTOVEINTIUNO
+            </span>
+          </div>
+        ) : (
+          <img
+            src={product.image}
+            alt={product.name}
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+          />
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-5">

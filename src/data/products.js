@@ -35,6 +35,3 @@ export const formatCOP = (value) =>
     currency: 'COP',
     maximumFractionDigits: 0,
   }).format(value)
-
-
-export { formatCOP }

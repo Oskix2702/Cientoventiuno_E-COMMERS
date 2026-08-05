@@ -29,7 +29,7 @@ export default function Header() {
           : 'bg-transparent'
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
+      <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 py-4 lg:px-[100px] xl:px-[200px]">
         <a
           href="#inicio"
           className="font-display text-3xl uppercase tracking-widest3 text-white transition-colors hover:text-grape sm:text-4xl"
@@ -37,19 +37,19 @@ export default function Header() {
           CientoVeintiuno
         </a>
 
-        <nav className="hidden items-center gap-10 md:flex">
-          {links.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="relative font-display text-lg uppercase tracking-widest2 text-chalk transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-grape after:transition-all hover:text-white hover:after:w-full"
-            >
-              {l.label}
-            </a>
-          ))}
-        </nav>
+        <div className="flex items-center gap-8">
+          <nav className="hidden items-center gap-8 md:flex">
+            {links.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="relative font-display text-lg uppercase tracking-widest2 text-chalk transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-grape after:transition-all hover:text-white hover:after:w-full"
+              >
+                {l.label}
+              </a>
+            ))}
+          </nav>
 
-        <div className="flex items-center gap-3">
           <button
             onClick={openCart}
             aria-label="Abrir carrito"

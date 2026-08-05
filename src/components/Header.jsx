@@ -30,11 +30,12 @@ export default function Header() {
       }`}
     >
       <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 py-4 lg:px-[100px] xl:px-[200px]">
-        <a
-          href="#inicio"
-          className="font-display text-3xl uppercase tracking-widest3 text-white transition-colors hover:text-grape sm:text-4xl"
-        >
-          CientoVeintiuno
+        <a href="#inicio" className="flex items-center">
+          <img
+            src="/assets/CIENTOVENTIUNO_LOGO.png"
+            alt="CIENTOVEINTIUNO"
+            className="h-12 w-auto object-contain"
+          />
         </a>
 
         <div className="flex items-center gap-8">

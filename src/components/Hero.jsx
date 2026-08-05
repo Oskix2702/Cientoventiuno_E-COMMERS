@@ -1,7 +1,6 @@
 import { ArrowDown } from 'lucide-react'
 
-const heroBg =
-  'https://images.pexels.com/photos/13783254/pexels-photo-13783254.jpeg?auto=compress&cs=tinysrgb&w=1920'
+const heroBg = '/assets/WEBSITE_MAIN/Image_Front.png'
 
 export default function Hero() {
   return (
@@ -10,7 +9,7 @@ export default function Hero() {
       className="relative flex h-screen min-h-[640px] flex-col items-center justify-center overflow-hidden text-center"
     >
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${heroBg})` }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/60 to-ink" />

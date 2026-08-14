@@ -1,21 +1,27 @@
 import { useState } from 'react'
-import { Plus, Check, ImageOff } from 'lucide-react'
+import { Plus, Check, ImageOff, Eye } from 'lucide-react'
 import { products, formatCOP } from '../data/products'
 import { useCart } from '../store/cartStore'
+import { useUI } from '../store/uiStore'
 
 function ProductCard({ product }) {
   const add = useCart((s) => s.add)
+  const openProduct = useUI((s) => s.openProduct)
   const [added, setAdded] = useState(false)
   const [imgError, setImgError] = useState(false)
 
-  const handleAdd = () => {
+  const handleAdd = (e) => {
+    e.stopPropagation()
     add(product)
     setAdded(true)
     setTimeout(() => setAdded(false), 1200)
   }
 
   return (
-    <article className="group relative flex flex-col overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60">
+    <article
+      onClick={() => openProduct(product.id)}
+      className="group relative flex cursor-pointer flex-col overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60"
+    >
       <div className="relative aspect-[3/4] overflow-hidden bg-ink">
         {imgError ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-plum/40">
@@ -33,6 +39,12 @@ function ProductCard({ product }) {
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />
         )}
+        <div className="absolute inset-0 flex items-center justify-center bg-ink/0 transition-colors duration-300 group-hover:bg-ink/40">
+          <span className="flex items-center gap-2 font-display text-lg uppercase tracking-widest2 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <Eye size={20} />
+            Ver detalle
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-5">

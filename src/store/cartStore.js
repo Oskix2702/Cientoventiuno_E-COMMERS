@@ -37,7 +37,7 @@ export const useCart = create((set, get) => ({
     }),
 
   remove: (lineId) =>
-    set((state) => state.items.filter((i) => i.lineId !== lineId)),
+    set((state) => ({ items: state.items.filter((i) => i.lineId !== lineId) })),
 
   inc: (lineId) =>
     set((state) => ({

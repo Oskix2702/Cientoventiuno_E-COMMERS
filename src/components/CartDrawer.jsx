@@ -61,7 +61,7 @@ export default function CartDrawer() {
             <ul className="space-y-4">
               {items.map((item) => (
                 <li
-                  key={item.id}
+                  key={item.lineId}
                   className="flex gap-4 border-b border-white/10 pb-4"
                 >
                   <img
@@ -75,21 +75,26 @@ export default function CartDrawer() {
                         {item.name}
                       </h3>
                       <button
-                        onClick={() => remove(item.id)}
+                        onClick={() => remove(item.lineId)}
                         aria-label="Eliminar"
                         className="text-chalk/50 transition-colors hover:text-red-400"
                       >
                         <Trash2 size={18} />
                       </button>
                     </div>
-                    <span className="font-body text-sm text-chalk/60">
+                    <div className="mt-1 flex items-center gap-2 font-body text-sm text-chalk/70">
+                      <span>Talla: <span className="text-white">{item.selectedSize}</span></span>
+                      <span className="text-white/20">|</span>
+                      <span>Color: <span className="text-white">{item.selectedColor}</span></span>
+                    </div>
+                    <span className="mt-1 font-body text-sm text-chalk/60">
                       {formatCOP(item.price)}
                     </span>
 
                     <div className="mt-auto flex items-center justify-between pt-3">
                       <div className="flex items-center gap-3 ring-1 ring-white/15">
                         <button
-                          onClick={() => dec(item.id)}
+                          onClick={() => dec(item.lineId)}
                           aria-label="Disminuir"
                           className="p-1.5 text-chalk transition-colors hover:text-grape"
                         >
@@ -99,7 +104,7 @@ export default function CartDrawer() {
                           {item.qty}
                         </span>
                         <button
-                          onClick={() => inc(item.id)}
+                          onClick={() => inc(item.lineId)}
                           aria-label="Aumentar"
                           className="p-1.5 text-chalk transition-colors hover:text-grape"
                         >

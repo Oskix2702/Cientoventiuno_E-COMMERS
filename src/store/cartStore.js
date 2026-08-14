@@ -8,33 +8,48 @@ export const useCart = create((set, get) => ({
   close: () => set({ isOpen: false }),
   toggle: () => set((s) => ({ isOpen: !s.isOpen })),
 
-  add: (product) =>
+  add: (product, selectedSize, selectedColor) =>
     set((state) => {
-      const existing = state.items.find((i) => i.id === product.id)
+      const lineId = `${product.id}-${selectedSize}-${selectedColor}`
+      const existing = state.items.find((i) => i.lineId === lineId)
       if (existing) {
         return {
           items: state.items.map((i) =>
-            i.id === product.id ? { ...i, qty: i.qty + 1 } : i
+            i.lineId === lineId ? { ...i, qty: i.qty + 1 } : i
           ),
         }
       }
-      return { items: [...state.items, { ...product, qty: 1 }] }
+      return {
+        items: [
+          ...state.items,
+          {
+            lineId,
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            selectedSize,
+            selectedColor,
+            qty: 1,
+          },
+        ],
+      }
     }),
 
-  remove: (id) =>
-    set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
+  remove: (lineId) =>
+    set((state) => state.items.filter((i) => i.lineId !== lineId)),
 
-  inc: (id) =>
+  inc: (lineId) =>
     set((state) => ({
       items: state.items.map((i) =>
-        i.id === id ? { ...i, qty: i.qty + 1 } : i
+        i.lineId === lineId ? { ...i, qty: i.qty + 1 } : i
       ),
     })),
 
-  dec: (id) =>
+  dec: (lineId) =>
     set((state) => ({
       items: state.items
-        .map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i))
+        .map((i) => (i.lineId === lineId ? { ...i, qty: i.qty - 1 } : i))
         .filter((i) => i.qty > 0),
     })),
 

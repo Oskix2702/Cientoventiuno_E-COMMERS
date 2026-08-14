@@ -1,21 +1,11 @@
 import { useState } from 'react'
-import { Plus, Check, ImageOff, Eye } from 'lucide-react'
+import { ImageOff, Eye, ArrowRight } from 'lucide-react'
 import { products, formatCOP } from '../data/products'
-import { useCart } from '../store/cartStore'
 import { useUI } from '../store/uiStore'
 
 function ProductCard({ product }) {
-  const add = useCart((s) => s.add)
   const openProduct = useUI((s) => s.openProduct)
-  const [added, setAdded] = useState(false)
   const [imgError, setImgError] = useState(false)
-
-  const handleAdd = (e) => {
-    e.stopPropagation()
-    add(product)
-    setAdded(true)
-    setTimeout(() => setAdded(false), 1200)
-  }
 
   return (
     <article
@@ -58,18 +48,10 @@ function ProductCard({ product }) {
           <span className="font-display text-2xl tracking-wide text-white">
             {formatCOP(product.price)}
           </span>
-          <button
-            onClick={handleAdd}
-            aria-label={`Añadir ${product.name}`}
-            className={`flex items-center gap-2 px-4 py-2 font-display text-base uppercase tracking-widest2 transition-all duration-300 ${
-              added
-                ? 'bg-emerald-500 text-white'
-                : 'bg-grape text-white hover:scale-110 hover:bg-grapeDark hover:shadow-[0_6px_24px_rgba(138,43,226,0.45)]'
-            }`}
-          >
-            {added ? <Check size={18} /> : <Plus size={18} />}
-            {added ? 'Añadido' : 'Añadir'}
-          </button>
+          <span className="flex items-center gap-2 bg-grape px-4 py-2 font-display text-base uppercase tracking-widest2 text-white transition-all duration-300 group-hover:scale-110 group-hover:bg-grapeDark group-hover:shadow-[0_6px_24px_rgba(138,43,226,0.45)]">
+            Ver
+            <ArrowRight size={18} />
+          </span>
         </div>
       </div>
     </article>

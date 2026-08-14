@@ -70,6 +70,7 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState(null)
   const [added, setAdded] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [showWarning, setShowWarning] = useState(false)
 
   useEffect(() => {
     setActiveImage(0)
@@ -77,6 +78,7 @@ export default function ProductDetail() {
     setSelectedSize(null)
     setAdded(false)
     setImgError(false)
+    setShowWarning(false)
   }, [productId])
 
   if (!product) return null
@@ -84,14 +86,26 @@ export default function ProductDetail() {
   const gallery = product.gallery || [product.image]
   const currentImage = product.variants?.[activeVariant]?.image || gallery[activeImage] || product.image
 
+  const selectedColor = product.variants?.[activeVariant]?.name || 'Único'
+
   const handleAdd = () => {
-    add(product)
+    if (!selectedSize) {
+      setShowWarning(true)
+      setTimeout(() => setShowWarning(false), 3000)
+      return
+    }
+    add(product, selectedSize, selectedColor)
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
   }
 
   const handleViewCart = () => {
-    add(product)
+    if (!selectedSize) {
+      setShowWarning(true)
+      setTimeout(() => setShowWarning(false), 3000)
+      return
+    }
+    add(product, selectedSize, selectedColor)
     openCart()
   }
 
@@ -266,10 +280,12 @@ export default function ProductDetail() {
                 Ver bolsa
               </button>
             </div>
-            {!selectedSize && (
-              <p className="-mt-2 font-body text-sm text-chalk/50">
-                Selecciona una talla para continuar
-              </p>
+            {showWarning && (
+              <div className="flex items-center gap-2 rounded border border-red-500/40 bg-red-500/10 px-4 py-3">
+                <span className="font-body text-sm text-red-300">
+                  Debes seleccionar una talla antes de agregar a la bolsa
+                </span>
+              </div>
             )}
 
             {/* Shipping info */}

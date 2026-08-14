@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ShoppingBag, Menu, X } from 'lucide-react'
 import { useCart } from '../store/cartStore'
+import { useUI } from '../store/uiStore'
 
 const links = [
-  { label: 'Inicio', href: '#inicio' },
-  { label: 'Colecciones', href: '#colecciones' },
-  { label: 'Quiénes Somos', href: '#quienes' },
+  { label: 'Inicio', view: 'inicio' },
+  { label: 'Colecciones', view: 'colecciones' },
+  { label: 'Quiénes Somos', view: 'quienes' },
 ]
 
 export default function Header() {
@@ -13,6 +14,8 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const count = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0))
   const openCart = useCart((s) => s.open)
+  const view = useUI((s) => s.view)
+  const backToStore = useUI((s) => s.backToStore)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -21,33 +24,53 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const handleNav = (target) => {
+    if (view !== 'store') {
+      backToStore()
+      setTimeout(() => {
+        document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    } else {
+      document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
+  const handleLogo = () => {
+    if (view !== 'store') {
+      backToStore()
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100)
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
-        scrolled
+        scrolled || view === 'product'
           ? 'bg-ink/95 backdrop-blur-md shadow-[0_2px_20px_rgba(0,0,0,0.6)]'
           : 'bg-transparent'
       }`}
     >
       <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 py-4 lg:px-[100px] xl:px-[200px]">
-        <a href="#inicio" className="flex items-center">
+        <button onClick={handleLogo} className="flex items-center">
           <img
             src="https://raw.githubusercontent.com/Oskix2702/Cientoventiuno_E-COMMERS/master/assets/CIENTOVENTIUNO_LOGO.png"
             alt="CIENTOVEINTIUNO"
             className="h-12 w-auto object-contain"
           />
-        </a>
+        </button>
 
         <div className="flex items-center gap-8">
           <nav className="hidden items-center gap-8 md:flex">
             {links.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
+              <button
+                key={l.view}
+                onClick={() => handleNav(l.view)}
                 className="relative font-display text-lg uppercase tracking-widest2 text-chalk transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-grape after:transition-all hover:text-white hover:after:w-full"
               >
                 {l.label}
-              </a>
+              </button>
             ))}
           </nav>
 
@@ -96,14 +119,16 @@ export default function Header() {
             </div>
             <nav className="flex flex-col gap-5">
               {links.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="font-display text-2xl uppercase tracking-widest2 text-chalk transition-colors hover:text-grape"
+                <button
+                  key={l.view}
+                  onClick={() => {
+                    handleNav(l.view)
+                    setMenuOpen(false)
+                  }}
+                  className="text-left font-display text-2xl uppercase tracking-widest2 text-chalk transition-colors hover:text-grape"
                 >
                   {l.label}
-                </a>
+                </button>
               ))}
             </nav>
           </div>

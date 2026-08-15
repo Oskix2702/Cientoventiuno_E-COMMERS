@@ -9,4 +9,6 @@ export const useUI = create((set) => ({
     window.scrollTo({ top: 0, behavior: 'instant' })
   },
   backToStore: () => set({ view: 'store', selectedProductId: null }),
+  goAdmin: () => set({ view: 'admin' }),
+  goLogin: () => set({ view: 'login' }),
 }))

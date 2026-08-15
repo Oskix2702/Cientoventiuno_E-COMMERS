@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ImageOff, Eye, ArrowRight } from 'lucide-react'
-import { products, formatCOP } from '../data/products'
+import { supabase } from '../lib/supabase'
+import { formatCOP } from '../data/products'
 import { useUI } from '../store/uiStore'
 
 function ProductCard({ product }) {
   const openProduct = useUI((s) => s.openProduct)
   const [imgError, setImgError] = useState(false)
+  const agotado = product.stock <= 0
 
   return (
     <article
@@ -29,6 +31,11 @@ function ProductCard({ product }) {
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />
         )}
+        {agotado && (
+          <div className="absolute left-0 top-0 z-10 bg-red-500/90 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-white">
+            Agotado
+          </div>
+        )}
         <div className="absolute inset-0 flex items-center justify-center bg-ink/0 transition-colors duration-300 group-hover:bg-ink/40">
           <span className="flex items-center gap-2 font-display text-lg uppercase tracking-widest2 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
             <Eye size={20} />
@@ -48,9 +55,13 @@ function ProductCard({ product }) {
           <span className="font-display text-2xl tracking-wide text-white">
             {formatCOP(product.price)}
           </span>
-          <span className="flex items-center gap-2 bg-grape px-4 py-2 font-display text-base uppercase tracking-widest2 text-white transition-all duration-300 group-hover:scale-110 group-hover:bg-grapeDark group-hover:shadow-[0_6px_24px_rgba(138,43,226,0.45)]">
-            Ver
-            <ArrowRight size={18} />
+          <span className={`flex items-center gap-2 px-4 py-2 font-display text-base uppercase tracking-widest2 text-white transition-all duration-300 ${
+            agotado
+              ? 'bg-white/10 text-white/40'
+              : 'bg-grape group-hover:scale-110 group-hover:bg-grapeDark group-hover:shadow-[0_6px_24px_rgba(138,43,226,0.45)]'
+          }`}>
+            {agotado ? 'Agotado' : 'Ver'}
+            {!agotado && <ArrowRight size={18} />}
           </span>
         </div>
       </div>
@@ -59,6 +70,18 @@ function ProductCard({ product }) {
 }
 
 export default function Collections() {
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+      setProducts(data || [])
+      setLoading(false)
+    }
+    fetchProducts()
+  }, [])
+
   return (
     <section id="colecciones" className="bg-ink px-5 py-24 sm:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
@@ -71,11 +94,17 @@ export default function Collections() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="py-20 text-center font-display text-2xl uppercase tracking-widest2 text-chalk/50">
+            Cargando productos...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {products.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

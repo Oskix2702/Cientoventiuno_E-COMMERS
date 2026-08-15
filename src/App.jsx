@@ -13,9 +13,22 @@ import { useAuth } from './store/authStore'
 
 export default function App() {
   const view = useUI((s) => s.view)
+  const backToStore = useUI((s) => s.backToStore)
+  const goLogin = useUI((s) => s.goLogin)
   const { init, user, profile, loading } = useAuth()
 
   useEffect(() => { init() }, [])
+
+  // Redirect non-admins away from /admin
+  useEffect(() => {
+    if (view === 'admin' && !loading && profile?.role !== 'admin') {
+      if (user) {
+        backToStore()
+      } else {
+        goLogin()
+      }
+    }
+  }, [view, loading, profile, user, backToStore, goLogin])
 
   if (loading) {
     return (

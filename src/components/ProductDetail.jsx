@@ -73,7 +73,20 @@ export default function ProductDetail() {
       setLoading(false)
     }
     if (productId) fetchProduct()
-  }, [productId])
+
+    const channel = supabase
+      .channel(`product-${productId}-realtime`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        if (payload.eventType === 'DELETE' && payload.old?.id === productId) {
+          backToStore()
+          return
+        }
+        fetchProduct()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [productId, backToStore])
 
   if (loading) {
     return (

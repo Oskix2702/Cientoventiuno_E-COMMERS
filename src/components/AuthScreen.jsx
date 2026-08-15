@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { ShoppingBag, Mail, Lock, User, ArrowRight, ArrowLeft } from 'lucide-react'
+import { ShoppingBag, Mail, Lock, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../store/authStore'
 import { useUI } from '../store/uiStore'
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth()
   const backToStore = useUI((s) => s.backToStore)
+  const goAdmin = useUI((s) => s.goAdmin)
 
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
@@ -20,6 +21,12 @@ export default function AuthScreen() {
     try {
       if (mode === 'login') {
         await signIn(email, password)
+        const profile = useAuth.getState().profile
+        if (profile?.role === 'admin') {
+          goAdmin()
+        } else {
+          backToStore()
+        }
       } else {
         await signUp(email, password)
         setError('Cuenta creada. Inicia sesión para continuar.')

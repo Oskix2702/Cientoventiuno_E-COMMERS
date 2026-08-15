@@ -19,13 +19,15 @@ export default function App() {
 
   useEffect(() => { init() }, [])
 
-  // Redirect non-admins away from /admin
+  // Route protection: block non-admins from /admin
   useEffect(() => {
-    if (view === 'admin' && !loading && profile?.role !== 'admin') {
-      if (user) {
-        backToStore()
-      } else {
-        goLogin()
+    if (view === 'admin' && !loading) {
+      if (profile?.role !== 'admin') {
+        if (user) {
+          backToStore()
+        } else {
+          goLogin()
+        }
       }
     }
   }, [view, loading, profile, user, backToStore, goLogin])
@@ -40,12 +42,19 @@ export default function App() {
 
   const isAdmin = profile?.role === 'admin'
 
-  let content
+  // Admin gets its own standalone layout — no store header/footer/cart
+  if (view === 'admin') {
+    return isAdmin ? <AdminDashboard /> : <AuthScreen />
+  }
+
+  // Login screen also gets a minimal layout
   if (view === 'login') {
-    content = <AuthScreen />
-  } else if (view === 'admin') {
-    content = isAdmin ? <AdminDashboard /> : <AuthScreen />
-  } else if (view === 'product') {
+    return <AuthScreen />
+  }
+
+  // Store layout: header + content + footer + cart
+  let content
+  if (view === 'product') {
     content = <ProductDetail />
   } else {
     content = (

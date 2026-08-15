@@ -80,6 +80,13 @@ export default function Collections() {
       setLoading(false)
     }
     fetchProducts()
+
+    const channel = supabase
+      .channel('collections-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchProducts())
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   return (

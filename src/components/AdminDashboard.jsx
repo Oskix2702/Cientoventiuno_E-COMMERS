@@ -1,19 +1,25 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Package, Boxes, AlertOctagon, Plus, Pencil, Trash2, X, LogOut,
-  Store, Shield, Save,
+  Store, Shield, Save, Upload, ImageIcon,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../store/authStore'
 import { useUI } from '../store/uiStore'
 import { formatCOP } from '../data/products'
 
+function getProductImage(product) {
+  if (product.images && product.images.length > 0) return product.images[0]
+  if (product.image) return product.image
+  return null
+}
+
 export default function AdminDashboard() {
   const { user, profile, signOut } = useAuth()
   const backToStore = useUI((s) => s.backToStore)
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null) // null | 'create' | { type: 'edit', product }
+  const [modal, setModal] = useState(null)
 
   const fetchProducts = useCallback(async () => {
     const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
@@ -23,12 +29,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchProducts()
-
     const channel = supabase
       .channel('products-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchProducts())
       .subscribe()
-
     return () => { supabase.removeChannel(channel) }
   }, [fetchProducts])
 
@@ -36,9 +40,15 @@ export default function AdminDashboard() {
   const totalStock = products.reduce((sum, p) => sum + (p.stock || 0), 0)
   const agotados = products.filter((p) => p.stock <= 0).length
 
+  const handleDelete = async (id, name) => {
+    if (!confirm(`¿Eliminar "${name}" del catálogo? Esta acción no se puede deshacer.`)) return
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) { alert('Error al eliminar: ' + error.message); return }
+    fetchProducts()
+  }
+
   return (
     <div className="min-h-screen bg-ink">
-      {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
           <div className="flex items-center gap-3">
@@ -53,38 +63,30 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3">
             <span className="hidden font-body text-sm text-chalk/60 sm:block">{user?.email}</span>
             <button onClick={backToStore} className="flex items-center gap-1.5 border border-white/20 px-4 py-2 font-display text-sm uppercase tracking-widest2 text-chalk transition-colors hover:border-grape hover:text-grape">
-              <Store size={16} />
-              Tienda
+              <Store size={16} /> Tienda
             </button>
             <button onClick={signOut} aria-label="Cerrar sesión" className="flex items-center gap-1.5 border border-red-500/40 px-4 py-2 font-display text-sm uppercase tracking-widest2 text-red-400 transition-all hover:bg-red-500/10">
-              <LogOut size={16} />
-              <span className="hidden sm:block">Salir</span>
+              <LogOut size={16} /> <span className="hidden sm:block">Salir</span>
             </button>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-        {/* Metrics */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <MetricCard icon={Package} label="Total Productos" value={totalProducts} color="grape" />
           <MetricCard icon={Boxes} label="Unidades en Stock" value={totalStock} color="emerald" />
           <MetricCard icon={AlertOctagon} label="Productos Agotados" value={agotados} color="red" />
         </div>
 
-        {/* Inventory header */}
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-2xl uppercase tracking-widest2 text-white">Gestión de Inventario</h2>
-          <button
-            onClick={() => setModal({ type: 'create' })}
-            className="flex items-center gap-2 bg-grape px-5 py-2.5 font-display text-sm uppercase tracking-widest2 text-white transition-all hover:bg-grapeDark hover:shadow-[0_6px_24px_rgba(138,43,226,0.45)] active:scale-95"
-          >
-            <Plus size={18} />
-            Añadir Producto
+          <button onClick={() => setModal({ type: 'create' })}
+            className="flex items-center gap-2 bg-grape px-5 py-2.5 font-display text-sm uppercase tracking-widest2 text-white transition-all hover:bg-grapeDark hover:shadow-[0_6px_24px_rgba(138,43,226,0.45)] active:scale-95">
+            <Plus size={18} /> Añadir Producto
           </button>
         </div>
 
-        {/* Inventory table */}
         {loading ? (
           <div className="py-20 text-center font-display text-xl uppercase tracking-widest2 text-chalk/50">Cargando inventario...</div>
         ) : products.length === 0 ? (
@@ -102,47 +104,53 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
-                  <tr key={p.id} className="border-b border-white/5 transition-colors hover:bg-plum/20">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <img src={p.image} alt={p.name} className="h-14 w-12 flex-shrink-0 object-cover ring-1 ring-white/10" />
-                        <div>
-                          <p className="font-display text-base uppercase tracking-wide text-white">{p.name}</p>
-                          <p className="font-body text-xs text-chalk/50">{p.category}</p>
+                {products.map((p) => {
+                  const thumb = getProductImage(p)
+                  return (
+                    <tr key={p.id} className="border-b border-white/5 transition-colors hover:bg-plum/20">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          {thumb ? (
+                            <img src={thumb} alt={p.name} className="h-14 w-12 flex-shrink-0 object-cover ring-1 ring-white/10" />
+                          ) : (
+                            <div className="flex h-14 w-12 flex-shrink-0 items-center justify-center bg-plum/30 ring-1 ring-white/10">
+                              <ImageIcon size={18} className="text-white/30" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-display text-base uppercase tracking-wide text-white">{p.name}</p>
+                            <p className="font-body text-xs text-chalk/50">{p.category}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 font-display text-lg text-white">{formatCOP(p.price)}</td>
-                    <td className="px-4 py-4 font-body text-lg text-white">{p.stock}</td>
-                    <td className="px-4 py-4">
-                      {p.stock > 0 ? (
-                        <span className="inline-block border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-display text-xs uppercase tracking-widest2 text-emerald-400">En stock</span>
-                      ) : (
-                        <span className="inline-block border border-red-500/40 bg-red-500/10 px-3 py-1 font-display text-xs uppercase tracking-widest2 text-red-400">Agotado</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex gap-2">
-                        <button onClick={() => setModal({ type: 'edit', product: p })} className="flex items-center gap-1 border border-white/20 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-chalk transition-colors hover:border-grape hover:text-grape">
-                          <Pencil size={14} />
-                          Editar
-                        </button>
-                        <button onClick={() => handleDelete(p.id, p.name)} className="flex items-center gap-1 border border-red-500/30 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-red-400 transition-colors hover:bg-red-500/10">
-                          <Trash2 size={14} />
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-4 font-display text-lg text-white">{formatCOP(p.price)}</td>
+                      <td className="px-4 py-4 font-body text-lg text-white">{p.stock}</td>
+                      <td className="px-4 py-4">
+                        {p.stock > 0 ? (
+                          <span className="inline-block border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-display text-xs uppercase tracking-widest2 text-emerald-400">En stock</span>
+                        ) : (
+                          <span className="inline-block border border-red-500/40 bg-red-500/10 px-3 py-1 font-display text-xs uppercase tracking-widest2 text-red-400">Agotado</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex gap-2">
+                          <button onClick={() => setModal({ type: 'edit', product: p })} className="flex items-center gap-1 border border-white/20 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-chalk transition-colors hover:border-grape hover:text-grape">
+                            <Pencil size={14} /> Editar
+                          </button>
+                          <button onClick={() => handleDelete(p.id, p.name)} className="flex items-center gap-1 border border-red-500/30 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-red-400 transition-colors hover:bg-red-500/10">
+                            <Trash2 size={14} /> Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Modal */}
       {modal && (
         <ProductModal
           mode={modal.type}
@@ -153,16 +161,6 @@ export default function AdminDashboard() {
       )}
     </div>
   )
-
-  async function handleDelete(id, name) {
-    if (!confirm(`¿Eliminar "${name}" del catálogo? Esta acción no se puede deshacer.`)) return
-    const { error } = await supabase.from('products').delete().eq('id', id)
-    if (error) {
-      alert('Error al eliminar: ' + error.message)
-    } else {
-      fetchProducts()
-    }
-  }
 }
 
 function MetricCard({ icon: Icon, label, value, color }) {
@@ -184,16 +182,30 @@ function MetricCard({ icon: Icon, label, value, color }) {
   )
 }
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 function ProductModal({ mode, product, onClose, onSaved }) {
   const isEdit = mode === 'edit'
   const [form, setForm] = useState(() => {
     if (product) {
+      const existingImages = (product.images && product.images.length > 0)
+        ? product.images
+        : (product.gallery && product.gallery.length > 0)
+          ? product.gallery
+          : (product.image ? [product.image] : [])
       return {
         name: product.name || '',
         category: product.category || '',
         description: product.description || '',
         price: String(product.price || ''),
-        image: product.image || '',
+        images: existingImages,
         stock: String(product.stock || 0),
         sizes: (product.sizes || []).join(', '),
         material: product.material || '',
@@ -201,28 +213,65 @@ function ProductModal({ mode, product, onClose, onSaved }) {
       }
     }
     return {
-      name: '', category: '', description: '', price: '', image: '', stock: '', sizes: 'S, M, L, XL, XXL', material: '', variants: [],
+      name: '', category: '', description: '', price: '', images: [], stock: '', sizes: 'S, M, L, XL, XXL', material: '', variants: [],
     }
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    setUploading(true)
+    try {
+      const base64Images = await Promise.all(files.map(fileToBase64))
+      setForm((prev) => ({ ...prev, images: [...prev.images, ...base64Images] }))
+    } catch (err) {
+      setError('Error al procesar las imágenes: ' + err.message)
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const removeImage = (index) => {
+    setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }))
+  }
+
+  const moveImage = (index, dir) => {
+    setForm((prev) => {
+      const imgs = [...prev.images]
+      const target = index + dir
+      if (target < 0 || target >= imgs.length) return prev
+      ;[imgs[index], imgs[target]] = [imgs[target], imgs[index]]
+      return { ...prev, images: imgs }
+    })
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSaving(true)
     setError(null)
 
+    if (form.images.length === 0) {
+      setError('Debes subir al menos una imagen del producto')
+      setSaving(false)
+      return
+    }
+
     const sizes = form.sizes.split(',').map((s) => s.trim()).filter(Boolean)
-    const img = form.image || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80'
+    const firstImage = form.images[0]
 
     const payload = {
       name: form.name,
       category: form.category,
       description: form.description,
       price: parseInt(form.price) || 0,
-      image: img,
-      gallery: [img],
-      variants: form.variants.length > 0 ? form.variants : [{ name: 'Único', color: '#1a1a1a', image: img }],
+      image: firstImage,
+      gallery: form.images,
+      images: form.images,
+      variants: form.variants.length > 0 ? form.variants : [{ name: 'Único', color: '#1a1a1a', image: firstImage }],
       sizes,
       material: form.material,
       stock: parseInt(form.stock) || 0,
@@ -276,31 +325,72 @@ function ProductModal({ mode, product, onClose, onSaved }) {
             </Field>
             <Field label="Precio (COP)" required>
               <input type="number" required min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })}
-                placeholder="75000"
-                className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
+                placeholder="75000" className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
             </Field>
             <Field label="Stock (unidades)" required>
               <input type="number" required min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                placeholder="50"
-                className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
+                placeholder="50" className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
             </Field>
-            <Field label="URL de imagen" full>
-              <input type="url" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })}
-                placeholder="https://..."
-                className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
-            </Field>
+          </div>
+
+          {/* Image upload section */}
+          <div className="mt-5">
+            <label className="mb-1.5 block font-display text-sm uppercase tracking-widest2 text-chalk">
+              Imágenes del producto <span className="text-grape">*</span>
+            </label>
+            <p className="mb-3 font-body text-xs text-chalk/50">
+              La primera imagen será la foto principal. Puedes subir múltiples fotos y reordenarlas.
+            </p>
+            <label className="flex cursor-pointer items-center justify-center gap-2 border-2 border-dashed border-white/20 bg-plum/20 px-4 py-8 transition-colors hover:border-grape hover:bg-grape/5">
+              <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
+              <Upload size={22} className="text-chalk/60" />
+              <span className="font-display text-base uppercase tracking-widest2 text-chalk/70">
+                {uploading ? 'Procesando...' : 'Seleccionar imágenes'}
+              </span>
+            </label>
+
+            {form.images.length > 0 && (
+              <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5">
+                {form.images.map((img, i) => (
+                  <div key={i} className="group relative aspect-square overflow-hidden ring-1 ring-white/10">
+                    <img src={img} alt={`Vista previa ${i + 1}`} className="h-full w-full object-cover" />
+                    {i === 0 && (
+                      <span className="absolute left-1 top-1 bg-grape px-1.5 py-0.5 font-display text-[10px] uppercase tracking-widest2 text-white">
+                        Principal
+                      </span>
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center gap-1 bg-ink/70 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0}
+                        className="rounded bg-white/10 px-1.5 py-1 text-white transition-colors hover:bg-grape disabled:opacity-30" aria-label="Mover izquierda">
+                        ←
+                      </button>
+                      <button type="button" onClick={() => removeImage(i)}
+                        className="rounded bg-red-500/40 p-1 text-white transition-colors hover:bg-red-500" aria-label="Eliminar imagen">
+                        <Trash2 size={14} />
+                      </button>
+                      <button type="button" onClick={() => moveImage(i, 1)} disabled={i === form.images.length - 1}
+                        className="rounded bg-white/10 px-1.5 py-1 text-white transition-colors hover:bg-grape disabled:opacity-30" aria-label="Mover derecha">
+                        →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Tallas (separadas por coma)" full>
               <input type="text" value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })}
                 className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
             </Field>
             <Field label="Descripción" full>
-              <textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+              <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
                 className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
             </Field>
             <Field label="Material" full>
               <input type="text" value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}
-                placeholder="Ej: Algodón perchado 260 gr"
-                className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
+                placeholder="Ej: Algodón perchado 260 gr" className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
             </Field>
           </div>
 

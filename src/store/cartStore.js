@@ -27,7 +27,7 @@ export const useCart = create((set, get) => ({
             id: product.id,
             name: product.name,
             price: product.price,
-            image: product.image,
+            image: (product.images && product.images.length > 0) ? product.images[0] : product.image,
             selectedSize,
             selectedColor,
             qty: 1,

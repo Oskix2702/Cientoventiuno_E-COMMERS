@@ -8,6 +8,7 @@ function ProductCard({ product }) {
   const openProduct = useUI((s) => s.openProduct)
   const [imgError, setImgError] = useState(false)
   const agotado = product.stock <= 0
+  const thumb = (product.images && product.images.length > 0) ? product.images[0] : product.image
 
   return (
     <article
@@ -24,7 +25,7 @@ function ProductCard({ product }) {
           </div>
         ) : (
           <img
-            src={product.image}
+            src={thumb}
             alt={product.name}
             loading="lazy"
             onError={() => setImgError(true)}

@@ -98,8 +98,12 @@ export default function ProductDetail() {
 
   if (!product) return null
 
-  const gallery = product.gallery || [product.image]
-  const currentImage = product.variants?.[activeVariant]?.image || gallery[activeImage] || product.image
+  const gallery = (product.images && product.images.length > 0)
+    ? product.images
+    : (product.gallery && product.gallery.length > 0)
+      ? product.gallery
+      : (product.image ? [product.image] : [])
+  const currentImage = product.variants?.[activeVariant]?.image || gallery[activeImage] || gallery[0] || product.image
   const selectedColor = product.variants?.[activeVariant]?.name || 'Único'
   const agotado = product.stock <= 0
   const reviews = product.reviews || []
@@ -315,8 +319,13 @@ export default function ProductDetail() {
                 <article key={p.id} onClick={() => openProduct(p.id)}
                   className="group cursor-pointer overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60">
                   <div className="relative aspect-[3/4] overflow-hidden bg-ink">
-                    <img src={p.image} alt={p.name} loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
+                    {(() => {
+                      const imgs = p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])
+                      const thumb = imgs[0]
+                      return thumb
+                        ? <img src={thumb} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
+                        : <div className="flex h-full w-full items-center justify-center bg-plum/40"><ImageOff size={32} className="text-white/30" /></div>
+                    })()}
                     {p.stock <= 0 && (
                       <div className="absolute left-0 top-0 bg-red-500/90 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-white">Agotado</div>
                     )}

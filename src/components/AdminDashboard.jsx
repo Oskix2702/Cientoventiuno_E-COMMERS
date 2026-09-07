@@ -6,7 +6,9 @@ import {
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../store/authStore'
 import { useUI } from '../store/uiStore'
+import { useToast } from '../store/toastStore'
 import { formatCOP } from '../data/products'
+import ConfirmDialog from './ConfirmDialog'
 
 function getProductImage(product) {
   if (product.variants && product.variants[0]?.images?.length > 0) return product.variants[0].images[0]
@@ -21,6 +23,8 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
+  const toast = useToast()
 
   const fetchProducts = useCallback(async () => {
     const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
@@ -41,11 +45,21 @@ export default function AdminDashboard() {
   const totalStock = products.reduce((sum, p) => sum + (p.stock || 0), 0)
   const agotados = products.filter((p) => p.stock <= 0).length
 
-  const handleDelete = async (id, name) => {
-    if (!confirm(`¿Eliminar "${name}" del catálogo? Esta acción no se puede deshacer.`)) return
+  const handleDelete = (id, name) => {
+    setConfirmState({ id, name })
+  }
+
+  const confirmDelete = async () => {
+    if (!confirmState) return
+    const { id, name } = confirmState
+    setConfirmState(null)
     const { error } = await supabase.from('products').delete().eq('id', id)
-    if (error) { alert('Error al eliminar: ' + error.message); return }
-    fetchProducts()
+    if (error) {
+      toast.error('Error al eliminar: ' + error.message)
+    } else {
+      toast.success(`"${name}" eliminado del catálogo`)
+      fetchProducts()
+    }
   }
 
   return (
@@ -160,6 +174,16 @@ export default function AdminDashboard() {
           onSaved={() => { setModal(null); fetchProducts() }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Eliminar producto"
+        message={`¿Eliminar "${confirmState?.name || ''}" del catálogo? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }
@@ -264,6 +288,7 @@ function ProductModal({ mode, product, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [activeVariantIdx, setActiveVariantIdx] = useState(0)
+  const toast = useToast()
 
   const activeVariant = form.variants[activeVariantIdx]
 
@@ -290,6 +315,7 @@ function ProductModal({ mode, product, onClose, onSaved }) {
       })
     } catch (err) {
       setError('Error al subir las imágenes: ' + err.message)
+      toast.error('Error al subir las imágenes')
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -391,8 +417,10 @@ function ProductModal({ mode, product, onClose, onSaved }) {
 
     if (result.error) {
       setError(result.error.message)
+      toast.error('Error al guardar: ' + result.error.message)
       setSaving(false)
     } else {
+      toast.success(isEdit ? 'Producto actualizado con éxito' : 'Producto creado con éxito')
       onSaved()
     }
   }

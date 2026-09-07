@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase'
 import { formatCOP } from '../data/products'
 import { useCart } from '../store/cartStore'
 import { useUI } from '../store/uiStore'
+import { useToast } from '../store/toastStore'
 
 function Stars({ rating, size = 14 }) {
   return (
@@ -60,6 +61,7 @@ export default function ProductDetail() {
   const openProduct = useUI((s) => s.openProduct)
   const add = useCart((s) => s.add)
   const openCart = useCart((s) => s.open)
+  const toast = useToast()
 
   const [product, setProduct] = useState(null)
   const [related, setRelated] = useState([])
@@ -133,10 +135,12 @@ export default function ProductDetail() {
     if (agotado) return
     if (!selectedSize) {
       setShowWarning(true)
+      toast.error('Debes seleccionar una talla antes de agregar a la bolsa')
       setTimeout(() => setShowWarning(false), 3000)
       return
     }
     add(product, selectedSize, selectedColor, resolvedActiveImage)
+    toast.success('Producto añadido a la bolsa')
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
   }
@@ -145,10 +149,12 @@ export default function ProductDetail() {
     if (agotado) return
     if (!selectedSize) {
       setShowWarning(true)
+      toast.error('Debes seleccionar una talla antes de agregar a la bolsa')
       setTimeout(() => setShowWarning(false), 3000)
       return
     }
     add(product, selectedSize, selectedColor, resolvedActiveImage)
+    toast.success('Producto añadido a la bolsa')
     openCart()
   }
 

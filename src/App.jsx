@@ -8,6 +8,7 @@ import CartDrawer from './components/CartDrawer'
 import ProductDetail from './components/ProductDetail'
 import AuthScreen from './components/AuthScreen'
 import AdminDashboard from './components/AdminDashboard'
+import ToastContainer from './components/ToastContainer'
 import { useUI } from './store/uiStore'
 import { useAuth } from './store/authStore'
 
@@ -42,12 +43,22 @@ export default function App() {
 
   // Admin gets its own standalone layout — no store header/footer/cart
   if (view === 'admin') {
-    return isAdmin ? <AdminDashboard /> : <AuthScreen />
+    return (
+      <>
+        {isAdmin ? <AdminDashboard /> : <AuthScreen />}
+        <ToastContainer />
+      </>
+    )
   }
 
   // Login screen also gets a minimal layout
   if (view === 'login') {
-    return <AuthScreen />
+    return (
+      <>
+        <AuthScreen />
+        <ToastContainer />
+      </>
+    )
   }
 
   // Store layout: header + content + footer + cart
@@ -70,6 +81,7 @@ export default function App() {
       <main>{content}</main>
       <Footer />
       <CartDrawer />
+      <ToastContainer />
     </>
   )
 }

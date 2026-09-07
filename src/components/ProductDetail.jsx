@@ -49,7 +49,7 @@ export default function ProductDetail() {
   const [related, setRelated] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [activeImage, setActiveImage] = useState(0)
+  const [activeImage, setActiveImage] = useState(null)
   const [activeVariant, setActiveVariant] = useState(0)
   const [selectedSize, setSelectedSize] = useState(null)
   const [added, setAdded] = useState(false)
@@ -57,7 +57,7 @@ export default function ProductDetail() {
   const [showWarning, setShowWarning] = useState(false)
 
   useEffect(() => {
-    setActiveImage(0)
+    setActiveImage(null)
     setActiveVariant(0)
     setSelectedSize(null)
     setAdded(false)
@@ -103,7 +103,7 @@ export default function ProductDetail() {
     : (product.gallery && product.gallery.length > 0)
       ? product.gallery
       : (product.image ? [product.image] : [])
-  const currentImage = product.variants?.[activeVariant]?.image || gallery[activeImage] || gallery[0] || product.image
+  const resolvedActiveImage = activeImage || gallery[0] || product.image
   const selectedColor = product.variants?.[activeVariant]?.name || 'Único'
   const agotado = product.stock <= 0
   const reviews = product.reviews || []
@@ -151,7 +151,7 @@ export default function ProductDetail() {
                   <span className="font-display text-xl uppercase tracking-widest2 text-white/40">CIENTOVEINTIUNO</span>
                 </div>
               ) : (
-                <img src={currentImage} alt={product.name} onError={() => setImgError(true)} className="h-full w-full object-cover" />
+                <img src={resolvedActiveImage} alt={product.name} onError={() => setImgError(true)} className="h-full w-full object-cover" />
               )}
               {agotado && (
                 <div className="absolute left-4 top-4 z-10 bg-red-500/90 px-4 py-2 font-display text-base uppercase tracking-widest2 text-white">
@@ -161,9 +161,9 @@ export default function ProductDetail() {
             </div>
             <div className="flex gap-3 lg:flex-col lg:gap-4">
               {gallery.map((img, i) => (
-                <button key={i} onClick={() => { setActiveImage(i); setImgError(false) }}
+                <button key={i} onClick={() => { setActiveImage(img); setImgError(false) }}
                   className={`relative h-20 w-20 flex-shrink-0 overflow-hidden ring-2 transition-all lg:h-24 lg:w-24 ${
-                    activeImage === i && activeVariant === 0 ? 'ring-grape' : 'ring-white/10 hover:ring-white/40'
+                    resolvedActiveImage === img ? 'ring-grape' : 'ring-white/10 hover:ring-white/40'
                   }`}>
                   <img src={img} alt={`${product.name} vista ${i + 1}`} className="h-full w-full object-cover" />
                 </button>
@@ -199,7 +199,7 @@ export default function ProductDetail() {
                 </p>
                 <div className="flex gap-3">
                   {product.variants.map((v, i) => (
-                    <button key={v.name} onClick={() => { setActiveVariant(i); setActiveImage(0); setImgError(false) }}
+                    <button key={v.name} onClick={() => { setActiveVariant(i); setActiveImage(v.image || gallery[0]); setImgError(false) }}
                       aria-label={v.name}
                       className={`relative h-14 w-14 overflow-hidden ring-2 transition-all hover:scale-110 ${
                         activeVariant === i ? 'ring-grape' : 'ring-white/10 hover:ring-white/40'

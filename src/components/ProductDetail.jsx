@@ -165,14 +165,14 @@ export default function ProductDetail() {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
           {/* Left: gallery */}
           <div className="flex flex-col gap-4 lg:flex-row-reverse lg:gap-6">
-            <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-neutral-900 ring-1 ring-white/10">
+            <div className="relative aspect-[4/5] flex-1 overflow-hidden bg-neutral-900 ring-1 ring-white/10">
               {imgError || !resolvedActiveImage ? (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-plum/40">
                   <ImageOff size={48} className="text-white/30" />
                   <span className="font-display text-xl uppercase tracking-widest2 text-white/40">CIENTOVEINTIUNO</span>
                 </div>
               ) : (
-                <img src={resolvedActiveImage} alt={product.name} onError={() => setImgError(true)} className="h-full w-full object-contain" />
+                <img src={resolvedActiveImage} alt={product.name} onError={() => setImgError(true)} className="h-full w-full object-cover" />
               )}
               {agotado && (
                 <div className="absolute left-4 top-4 z-10 bg-red-500/90 px-4 py-2 font-display text-base uppercase tracking-widest2 text-white">
@@ -351,7 +351,7 @@ export default function ProductDetail() {
                 return (
                   <article key={p.id} onClick={() => openProduct(p.id)}
                     className="group cursor-pointer overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60">
-                    <div className="relative aspect-[3/4] overflow-hidden bg-ink">
+                    <div className="relative aspect-[4/5] overflow-hidden bg-ink">
                       {thumb ? (
                         <img src={thumb} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
                       ) : (

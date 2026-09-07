@@ -17,7 +17,7 @@ function ProductCard({ product }) {
       onClick={() => openProduct(product.id)}
       className="group relative flex cursor-pointer flex-col overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60"
     >
-      <div className="relative aspect-[3/4] overflow-hidden bg-ink">
+      <div className="relative aspect-[4/5] overflow-hidden bg-ink">
         {imgError ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-plum/40">
             <ImageOff size={40} className="text-white/30" />

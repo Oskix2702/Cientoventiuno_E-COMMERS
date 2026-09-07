@@ -183,13 +183,52 @@ function MetricCard({ icon: Icon, label, value, color }) {
   )
 }
 
-function fileToBase64(file) {
+const BUCKET = 'product-images'
+
+function compressImage(file, maxDim = 1200, quality = 0.82) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxDim || height > maxDim) {
+        if (width >= height) {
+          height = Math.round((height / width) * maxDim)
+          width = maxDim
+        } else {
+          width = Math.round((width / height) * maxDim)
+          height = maxDim
+        }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+      const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+      canvas.toBlob((blob) => {
+        if (!blob) { reject(new Error('No se pudo comprimir la imagen')); return }
+        resolve(blob)
+      }, outType, quality)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo cargar la imagen')) }
+    img.src = url
   })
+}
+
+function isStorageUrl(str) {
+  return typeof str === 'string' && str.startsWith('http')
+}
+
+async function uploadImageToStorage(file, existingPath = null) {
+  const compressed = await compressImage(file)
+  const ext = file.type === 'image/png' ? 'png' : 'jpg'
+  const path = existingPath || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, compressed, { contentType: file.type, upsert: false })
+  if (error) throw error
+  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return pub.publicUrl
 }
 
 function ProductModal({ mode, product, onClose, onSaved }) {
@@ -228,22 +267,31 @@ function ProductModal({ mode, product, onClose, onSaved }) {
 
   const activeVariant = form.variants[activeVariantIdx]
 
+  const [uploading, setUploading] = useState(false)
+
   const handleVariantFileSelect = async (e) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
+    setUploading(true)
+    setError(null)
     try {
-      const base64Images = await Promise.all(files.map(fileToBase64))
+      const urls = []
+      for (const file of files) {
+        const url = await uploadImageToStorage(file)
+        urls.push(url)
+      }
       setForm((prev) => {
         const variants = [...prev.variants]
         variants[activeVariantIdx] = {
           ...variants[activeVariantIdx],
-          images: [...variants[activeVariantIdx].images, ...base64Images],
+          images: [...variants[activeVariantIdx].images, ...urls],
         }
         return { ...prev, variants }
       })
     } catch (err) {
-      setError('Error al procesar las imágenes: ' + err.message)
+      setError('Error al subir las imágenes: ' + err.message)
     } finally {
+      setUploading(false)
       e.target.value = ''
     }
   }
@@ -445,10 +493,10 @@ function ProductModal({ mode, product, onClose, onSaved }) {
                 <p className="mb-2 font-body text-xs text-chalk/50">
                   Imágenes de esta variante. La primera será la foto principal.
                 </p>
-                <label className="flex cursor-pointer items-center justify-center gap-2 border-2 border-dashed border-white/20 bg-plum/20 px-4 py-6 transition-colors hover:border-grape hover:bg-grape/5">
-                  <input type="file" multiple accept="image/*" onChange={handleVariantFileSelect} className="hidden" />
+                <label className={`flex cursor-pointer items-center justify-center gap-2 border-2 border-dashed px-4 py-6 transition-colors ${uploading ? 'border-grape bg-grape/5' : 'border-white/20 bg-plum/20 hover:border-grape hover:bg-grape/5'}`}>
+                  <input type="file" multiple accept="image/*" onChange={handleVariantFileSelect} className="hidden" disabled={uploading} />
                   <Upload size={20} className="text-chalk/60" />
-                  <span className="font-display text-sm uppercase tracking-widest2 text-chalk/70">Seleccionar imágenes</span>
+                  <span className="font-display text-sm uppercase tracking-widest2 text-chalk/70">{uploading ? 'Subiendo...' : 'Seleccionar imágenes'}</span>
                 </label>
 
                 {activeVariant.images.length > 0 && (
@@ -495,7 +543,7 @@ function ProductModal({ mode, product, onClose, onSaved }) {
           </div>
 
           <div className="mt-6 flex gap-3">
-            <button type="submit" disabled={saving}
+            <button type="submit" disabled={saving || uploading}
               className="flex flex-1 items-center justify-center gap-2 bg-grape px-8 py-3.5 font-display text-lg uppercase tracking-widest2 text-white transition-all hover:bg-grapeDark hover:shadow-[0_8px_30px_rgba(138,43,226,0.45)] active:scale-95 disabled:opacity-50">
               {saving ? 'Guardando...' : isEdit ? 'Guardar Cambios' : 'Crear Producto'}
               <Save size={18} />

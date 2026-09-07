@@ -11,6 +11,8 @@ import AdminDashboard from './components/AdminDashboard'
 import { useUI } from './store/uiStore'
 import { useAuth } from './store/authStore'
 
+const ADMIN_EMAIL = 'estebarin123@gmail.com'
+
 export default function App() {
   const view = useUI((s) => s.view)
   const backToStore = useUI((s) => s.backToStore)
@@ -19,18 +21,16 @@ export default function App() {
 
   useEffect(() => { init() }, [])
 
+  const isAdmin = profile?.role === 'admin' || (user?.email?.toLowerCase() === ADMIN_EMAIL)
+
   // Route protection: block non-admins from /admin
   useEffect(() => {
     if (view === 'admin' && !loading) {
-      if (profile?.role !== 'admin') {
-        if (user) {
-          backToStore()
-        } else {
-          goLogin()
-        }
+      if (!isAdmin) {
+        if (user) { backToStore() } else { goLogin() }
       }
     }
-  }, [view, loading, profile, user, backToStore, goLogin])
+  }, [view, loading, profile, user, backToStore, goLogin, isAdmin])
 
   if (loading) {
     return (
@@ -39,8 +39,6 @@ export default function App() {
       </div>
     )
   }
-
-  const isAdmin = profile?.role === 'admin'
 
   // Admin gets its own standalone layout — no store header/footer/cart
   if (view === 'admin') {

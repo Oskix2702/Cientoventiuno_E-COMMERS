@@ -31,9 +31,9 @@ export const useAuth = create((set, get) => ({
   signIn: async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
-    // Load profile immediately so redirect logic can read the role
     await loadProfile(data.user.id, set)
-    return data
+    const profile = get().profile
+    return { user: data.user, profile, email: data.user.email }
   },
 
   signUp: async (email, password) => {

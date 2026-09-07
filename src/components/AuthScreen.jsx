@@ -3,6 +3,8 @@ import { ShoppingBag, Mail, Lock, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../store/authStore'
 import { useUI } from '../store/uiStore'
 
+const ADMIN_EMAIL = 'estebarin123@gmail.com'
+
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth()
   const backToStore = useUI((s) => s.backToStore)
@@ -20,9 +22,9 @@ export default function AuthScreen() {
     setLoading(true)
     try {
       if (mode === 'login') {
-        await signIn(email, password)
-        const profile = useAuth.getState().profile
-        if (profile?.role === 'admin') {
+        const result = await signIn(email, password)
+        const isAdmin = result?.profile?.role === 'admin' || email.toLowerCase() === ADMIN_EMAIL
+        if (isAdmin) {
           goAdmin()
         } else {
           backToStore()

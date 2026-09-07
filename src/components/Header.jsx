@@ -21,7 +21,7 @@ export default function Header() {
   const goAdmin = useUI((s) => s.goAdmin)
   const { user, profile, signOut } = useAuth()
 
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' || (user?.email?.toLowerCase() === 'estebarin123@gmail.com')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)

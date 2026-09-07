@@ -9,6 +9,7 @@ import { useUI } from '../store/uiStore'
 import { formatCOP } from '../data/products'
 
 function getProductImage(product) {
+  if (product.variants && product.variants[0]?.images?.length > 0) return product.variants[0].images[0]
   if (product.images && product.images.length > 0) return product.images[0]
   if (product.image) return product.image
   return null
@@ -195,57 +196,105 @@ function ProductModal({ mode, product, onClose, onSaved }) {
   const isEdit = mode === 'edit'
   const [form, setForm] = useState(() => {
     if (product) {
-      const existingImages = (product.images && product.images.length > 0)
-        ? product.images
-        : (product.gallery && product.gallery.length > 0)
-          ? product.gallery
-          : (product.image ? [product.image] : [])
+      const rawVariants = (product.variants && product.variants.length > 0)
+        ? product.variants
+        : [{ colorName: 'Único', color: '#1a1a1a', images: (product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : [])) }]
+      const variants = rawVariants.map((v) => ({
+        colorName: v.colorName || v.name || 'Único',
+        color: v.color || '#1a1a1a',
+        images: (v.images && v.images.length > 0)
+          ? v.images
+          : (v.image ? [v.image] : []),
+      }))
       return {
         name: product.name || '',
         category: product.category || '',
         description: product.description || '',
         price: String(product.price || ''),
-        images: existingImages,
         stock: String(product.stock || 0),
         sizes: (product.sizes || []).join(', '),
         material: product.material || '',
-        variants: product.variants || [],
+        variants,
       }
     }
     return {
-      name: '', category: '', description: '', price: '', images: [], stock: '', sizes: 'S, M, L, XL, XXL', material: '', variants: [],
+      name: '', category: '', description: '', price: '', stock: '', sizes: 'S, M, L, XL, XXL', material: '',
+      variants: [{ colorName: 'Único', color: '#1a1a1a', images: [] }],
     }
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
-  const [uploading, setUploading] = useState(false)
+  const [activeVariantIdx, setActiveVariantIdx] = useState(0)
 
-  const handleFileSelect = async (e) => {
+  const activeVariant = form.variants[activeVariantIdx]
+
+  const handleVariantFileSelect = async (e) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
-    setUploading(true)
     try {
       const base64Images = await Promise.all(files.map(fileToBase64))
-      setForm((prev) => ({ ...prev, images: [...prev.images, ...base64Images] }))
+      setForm((prev) => {
+        const variants = [...prev.variants]
+        variants[activeVariantIdx] = {
+          ...variants[activeVariantIdx],
+          images: [...variants[activeVariantIdx].images, ...base64Images],
+        }
+        return { ...prev, variants }
+      })
     } catch (err) {
       setError('Error al procesar las imágenes: ' + err.message)
     } finally {
-      setUploading(false)
       e.target.value = ''
     }
   }
 
-  const removeImage = (index) => {
-    setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }))
+  const removeVariantImage = (imgIndex) => {
+    setForm((prev) => {
+      const variants = [...prev.variants]
+      variants[activeVariantIdx] = {
+        ...variants[activeVariantIdx],
+        images: variants[activeVariantIdx].images.filter((_, i) => i !== imgIndex),
+      }
+      return { ...prev, variants }
+    })
   }
 
-  const moveImage = (index, dir) => {
+  const moveVariantImage = (imgIndex, dir) => {
     setForm((prev) => {
-      const imgs = [...prev.images]
-      const target = index + dir
+      const variants = [...prev.variants]
+      const imgs = [...variants[activeVariantIdx].images]
+      const target = imgIndex + dir
       if (target < 0 || target >= imgs.length) return prev
-      ;[imgs[index], imgs[target]] = [imgs[target], imgs[index]]
-      return { ...prev, images: imgs }
+      ;[imgs[imgIndex], imgs[target]] = [imgs[target], imgs[imgIndex]]
+      variants[activeVariantIdx] = { ...variants[activeVariantIdx], images: imgs }
+      return { ...prev, variants }
+    })
+  }
+
+  const addVariant = () => {
+    setForm((prev) => ({
+      ...prev,
+      variants: [...prev.variants, { colorName: '', color: '#1a1a1a', images: [] }],
+    }))
+    setActiveVariantIdx(form.variants.length)
+  }
+
+  const removeVariant = (idx) => {
+    if (form.variants.length <= 1) return
+    setForm((prev) => {
+      const variants = prev.variants.filter((_, i) => i !== idx)
+      return { ...prev, variants }
+    })
+    if (activeVariantIdx >= form.variants.length - 1) {
+      setActiveVariantIdx(Math.max(0, activeVariantIdx - 1))
+    }
+  }
+
+  const updateVariant = (field, value) => {
+    setForm((prev) => {
+      const variants = [...prev.variants]
+      variants[activeVariantIdx] = { ...variants[activeVariantIdx], [field]: value }
+      return { ...prev, variants }
     })
   }
 
@@ -254,14 +303,21 @@ function ProductModal({ mode, product, onClose, onSaved }) {
     setSaving(true)
     setError(null)
 
-    if (form.images.length === 0) {
-      setError('Debes subir al menos una imagen del producto')
+    const hasImages = form.variants.some((v) => v.images.length > 0)
+    if (!hasImages) {
+      setError('Cada variante debe tener al menos una imagen')
       setSaving(false)
       return
     }
 
     const sizes = form.sizes.split(',').map((s) => s.trim()).filter(Boolean)
-    const firstImage = form.images[0]
+    const cleanVariants = form.variants.map((v) => ({
+      colorName: v.colorName || 'Único',
+      color: v.color || '#1a1a1a',
+      images: v.images,
+    }))
+    const allImages = cleanVariants.flatMap((v) => v.images)
+    const firstImage = allImages[0] || ''
 
     const payload = {
       name: form.name,
@@ -269,9 +325,9 @@ function ProductModal({ mode, product, onClose, onSaved }) {
       description: form.description,
       price: parseInt(form.price) || 0,
       image: firstImage,
-      gallery: form.images,
-      images: form.images,
-      variants: form.variants.length > 0 ? form.variants : [{ name: 'Único', color: '#1a1a1a', image: firstImage }],
+      gallery: allImages,
+      images: allImages,
+      variants: cleanVariants,
       sizes,
       material: form.material,
       stock: parseInt(form.stock) || 0,
@@ -333,50 +389,94 @@ function ProductModal({ mode, product, onClose, onSaved }) {
             </Field>
           </div>
 
-          {/* Image upload section */}
-          <div className="mt-5">
-            <label className="mb-1.5 block font-display text-sm uppercase tracking-widest2 text-chalk">
-              Imágenes del producto <span className="text-grape">*</span>
-            </label>
-            <p className="mb-3 font-body text-xs text-chalk/50">
-              La primera imagen será la foto principal. Puedes subir múltiples fotos y reordenarlas.
-            </p>
-            <label className="flex cursor-pointer items-center justify-center gap-2 border-2 border-dashed border-white/20 bg-plum/20 px-4 py-8 transition-colors hover:border-grape hover:bg-grape/5">
-              <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
-              <Upload size={22} className="text-chalk/60" />
-              <span className="font-display text-base uppercase tracking-widest2 text-chalk/70">
-                {uploading ? 'Procesando...' : 'Seleccionar imágenes'}
-              </span>
-            </label>
+          {/* Variants section */}
+          <div className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <label className="font-display text-sm uppercase tracking-widest2 text-chalk">
+                Variantes (Colores / Diseños) <span className="text-grape">*</span>
+              </label>
+              <button type="button" onClick={addVariant}
+                className="flex items-center gap-1 border border-grape/40 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-grape transition-colors hover:bg-grape/10">
+                <Plus size={14} /> Añadir variante
+              </button>
+            </div>
 
-            {form.images.length > 0 && (
-              <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5">
-                {form.images.map((img, i) => (
-                  <div key={i} className="group relative aspect-square overflow-hidden ring-1 ring-white/10">
-                    <img src={img} alt={`Vista previa ${i + 1}`} className="h-full w-full object-cover" />
-                    {i === 0 && (
-                      <span className="absolute left-1 top-1 bg-grape px-1.5 py-0.5 font-display text-[10px] uppercase tracking-widest2 text-white">
-                        Principal
-                      </span>
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center gap-1 bg-ink/70 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0}
-                        className="rounded bg-white/10 px-1.5 py-1 text-white transition-colors hover:bg-grape disabled:opacity-30" aria-label="Mover izquierda">
-                        ←
-                      </button>
-                      <button type="button" onClick={() => removeImage(i)}
-                        className="rounded bg-red-500/40 p-1 text-white transition-colors hover:bg-red-500" aria-label="Eliminar imagen">
-                        <Trash2 size={14} />
-                      </button>
-                      <button type="button" onClick={() => moveImage(i, 1)} disabled={i === form.images.length - 1}
-                        className="rounded bg-white/10 px-1.5 py-1 text-white transition-colors hover:bg-grape disabled:opacity-30" aria-label="Mover derecha">
-                        →
-                      </button>
-                    </div>
+            {/* Variant tabs */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              {form.variants.map((v, i) => (
+                <button key={i} type="button" onClick={() => setActiveVariantIdx(i)}
+                  className={`flex items-center gap-2 px-3 py-2 font-display text-xs uppercase tracking-widest2 transition-all ${
+                    activeVariantIdx === i
+                      ? 'bg-grape text-white'
+                      : 'border border-white/15 text-chalk hover:border-grape hover:text-grape'
+                  }`}>
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: v.color }} />
+                  {v.colorName || `Variante ${i + 1}`}
+                  {form.variants.length > 1 && (
+                    <span onClick={(e) => { e.stopPropagation(); removeVariant(i) }} className="ml-1 text-white/60 hover:text-red-400">
+                      <X size={12} />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Active variant editor */}
+            <div className="border border-white/10 bg-plum/10 p-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Nombre del color">
+                  <input type="text" value={activeVariant.colorName} onChange={(e) => updateVariant('colorName', e.target.value)}
+                    placeholder="Ej: Azul Oscuro, Negro"
+                    className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
+                </Field>
+                <div>
+                  <label className="mb-1.5 block font-display text-sm uppercase tracking-widest2 text-chalk">Color</label>
+                  <div className="flex items-center gap-3">
+                    <input type="color" value={activeVariant.color} onChange={(e) => updateVariant('color', e.target.value)}
+                      className="h-10 w-16 cursor-pointer border border-white/15 bg-transparent" />
+                    <input type="text" value={activeVariant.color} onChange={(e) => updateVariant('color', e.target.value)}
+                      className="w-full border border-white/15 bg-plum/20 px-3 py-2.5 font-body text-white focus:border-grape focus:outline-none" />
                   </div>
-                ))}
+                </div>
               </div>
-            )}
+
+              {/* Variant image upload */}
+              <div className="mt-4">
+                <p className="mb-2 font-body text-xs text-chalk/50">
+                  Imágenes de esta variante. La primera será la foto principal.
+                </p>
+                <label className="flex cursor-pointer items-center justify-center gap-2 border-2 border-dashed border-white/20 bg-plum/20 px-4 py-6 transition-colors hover:border-grape hover:bg-grape/5">
+                  <input type="file" multiple accept="image/*" onChange={handleVariantFileSelect} className="hidden" />
+                  <Upload size={20} className="text-chalk/60" />
+                  <span className="font-display text-sm uppercase tracking-widest2 text-chalk/70">Seleccionar imágenes</span>
+                </label>
+
+                {activeVariant.images.length > 0 && (
+                  <div className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-5">
+                    {activeVariant.images.map((img, i) => (
+                      <div key={i} className="group relative aspect-square overflow-hidden ring-1 ring-white/10">
+                        <img src={img} alt={`Variante ${i + 1}`} className="h-full w-full object-cover" />
+                        {i === 0 && (
+                          <span className="absolute left-1 top-1 bg-grape px-1.5 py-0.5 font-display text-[10px] uppercase tracking-widest2 text-white">
+                            Principal
+                          </span>
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center gap-1 bg-ink/70 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button type="button" onClick={() => moveVariantImage(i, -1)} disabled={i === 0}
+                            className="rounded bg-white/10 px-1.5 py-1 text-white transition-colors hover:bg-grape disabled:opacity-30" aria-label="Mover izquierda">←</button>
+                          <button type="button" onClick={() => removeVariantImage(i)}
+                            className="rounded bg-red-500/40 p-1 text-white transition-colors hover:bg-red-500" aria-label="Eliminar imagen">
+                            <Trash2 size={14} />
+                          </button>
+                          <button type="button" onClick={() => moveVariantImage(i, 1)} disabled={i === activeVariant.images.length - 1}
+                            className="rounded bg-white/10 px-1.5 py-1 text-white transition-colors hover:bg-grape disabled:opacity-30" aria-label="Mover derecha">→</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">

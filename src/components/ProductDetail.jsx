@@ -38,6 +38,22 @@ function Accordion({ title, children, defaultOpen = false }) {
   )
 }
 
+function normalizeVariants(product) {
+  if (!product.variants || product.variants.length === 0) {
+    const fallbackImages = (product.images && product.images.length > 0)
+      ? product.images
+      : (product.image ? [product.image] : [])
+    return [{ colorName: 'Único', color: '#1a1a1a', images: fallbackImages }]
+  }
+  return product.variants.map((v) => ({
+    colorName: v.colorName || v.name || 'Único',
+    color: v.color || '#1a1a1a',
+    images: (v.images && v.images.length > 0)
+      ? v.images
+      : (v.image ? [v.image] : (product.image ? [product.image] : [])),
+  }))
+}
+
 export default function ProductDetail() {
   const productId = useUI((s) => s.selectedProductId)
   const backToStore = useUI((s) => s.backToStore)
@@ -49,16 +65,16 @@ export default function ProductDetail() {
   const [related, setRelated] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [activeImage, setActiveImage] = useState(null)
   const [activeVariant, setActiveVariant] = useState(0)
+  const [activeImage, setActiveImage] = useState(null)
   const [selectedSize, setSelectedSize] = useState(null)
   const [added, setAdded] = useState(false)
   const [imgError, setImgError] = useState(false)
   const [showWarning, setShowWarning] = useState(false)
 
   useEffect(() => {
-    setActiveImage(null)
     setActiveVariant(0)
+    setActiveImage(null)
     setSelectedSize(null)
     setAdded(false)
     setImgError(false)
@@ -98,15 +114,20 @@ export default function ProductDetail() {
 
   if (!product) return null
 
-  const gallery = (product.images && product.images.length > 0)
-    ? product.images
-    : (product.gallery && product.gallery.length > 0)
-      ? product.gallery
-      : (product.image ? [product.image] : [])
+  const variants = normalizeVariants(product)
+  const currentVariant = variants[activeVariant]
+  const gallery = currentVariant.images.length > 0 ? currentVariant.images : (product.image ? [product.image] : [])
   const resolvedActiveImage = activeImage || gallery[0] || product.image
-  const selectedColor = product.variants?.[activeVariant]?.name || 'Único'
+  const selectedColor = currentVariant.colorName
   const agotado = product.stock <= 0
   const reviews = product.reviews || []
+  const hasMultipleVariants = variants.length > 1 || variants[0].colorName !== 'Único'
+
+  const handleVariantChange = (i) => {
+    setActiveVariant(i)
+    setActiveImage(null)
+    setImgError(false)
+  }
 
   const handleAdd = () => {
     if (agotado) return
@@ -115,7 +136,7 @@ export default function ProductDetail() {
       setTimeout(() => setShowWarning(false), 3000)
       return
     }
-    add(product, selectedSize, selectedColor)
+    add(product, selectedSize, selectedColor, resolvedActiveImage)
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
   }
@@ -127,7 +148,7 @@ export default function ProductDetail() {
       setTimeout(() => setShowWarning(false), 3000)
       return
     }
-    add(product, selectedSize, selectedColor)
+    add(product, selectedSize, selectedColor, resolvedActiveImage)
     openCart()
   }
 
@@ -145,7 +166,7 @@ export default function ProductDetail() {
           {/* Left: gallery */}
           <div className="flex flex-col gap-4 lg:flex-row-reverse lg:gap-6">
             <div className="relative aspect-square flex-1 overflow-hidden bg-plum/30 ring-1 ring-white/10">
-              {imgError ? (
+              {imgError || !resolvedActiveImage ? (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-plum/40">
                   <ImageOff size={48} className="text-white/30" />
                   <span className="font-display text-xl uppercase tracking-widest2 text-white/40">CIENTOVEINTIUNO</span>
@@ -191,23 +212,32 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Variants */}
-            {product.variants && product.variants.length > 0 && (
+            {/* Variants / Designs */}
+            {hasMultipleVariants && (
               <div>
                 <p className="mb-3 font-display text-lg uppercase tracking-widest2 text-chalk">
-                  Diseño: <span className="text-white">{product.variants[activeVariant].name}</span>
+                  Diseño: <span className="text-white">{currentVariant.colorName}</span>
                 </p>
                 <div className="flex gap-3">
-                  {product.variants.map((v, i) => (
-                    <button key={v.name} onClick={() => { setActiveVariant(i); setActiveImage(v.image || gallery[0]); setImgError(false) }}
-                      aria-label={v.name}
-                      className={`relative h-14 w-14 overflow-hidden ring-2 transition-all hover:scale-110 ${
-                        activeVariant === i ? 'ring-grape' : 'ring-white/10 hover:ring-white/40'
-                      }`}>
-                      <img src={v.image} alt={v.name} className="h-full w-full object-cover" />
-                      <span className="absolute bottom-0 left-0 h-1.5 w-full" style={{ backgroundColor: v.color }} />
-                    </button>
-                  ))}
+                  {variants.map((v, i) => {
+                    const vThumb = v.images[0]
+                    return (
+                      <button key={i} onClick={() => handleVariantChange(i)}
+                        aria-label={v.colorName}
+                        className={`relative h-14 w-14 overflow-hidden ring-2 transition-all hover:scale-110 ${
+                          activeVariant === i ? 'ring-grape' : 'ring-white/10 hover:ring-white/40'
+                        }`}>
+                        {vThumb ? (
+                          <img src={vThumb} alt={v.colorName} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-plum/40">
+                            <ImageOff size={16} className="text-white/30" />
+                          </div>
+                        )}
+                        <span className="absolute bottom-0 left-0 h-1.5 w-full" style={{ backgroundColor: v.color }} />
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -315,27 +345,29 @@ export default function ProductDetail() {
           <div className="mx-auto max-w-[1920px] px-4 lg:px-[100px] xl:px-[200px]">
             <h2 className="mb-10 text-center font-display text-4xl uppercase tracking-widest2 text-white sm:text-5xl">Más opciones</h2>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {related.map((p) => (
-                <article key={p.id} onClick={() => openProduct(p.id)}
-                  className="group cursor-pointer overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60">
-                  <div className="relative aspect-[3/4] overflow-hidden bg-ink">
-                    {(() => {
-                      const imgs = p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : [])
-                      const thumb = imgs[0]
-                      return thumb
-                        ? <img src={thumb} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
-                        : <div className="flex h-full w-full items-center justify-center bg-plum/40"><ImageOff size={32} className="text-white/30" /></div>
-                    })()}
-                    {p.stock <= 0 && (
-                      <div className="absolute left-0 top-0 bg-red-500/90 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-white">Agotado</div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1 p-5">
-                    <h3 className="font-display text-xl uppercase tracking-widest2 text-white">{p.name}</h3>
-                    <span className="font-display text-lg tracking-wide text-grape">{formatCOP(p.price)}</span>
-                  </div>
-                </article>
-              ))}
+              {related.map((p) => {
+                const pVariants = normalizeVariants(p)
+                const thumb = pVariants[0]?.images?.[0] || p.image
+                return (
+                  <article key={p.id} onClick={() => openProduct(p.id)}
+                    className="group cursor-pointer overflow-hidden bg-plum/30 ring-1 ring-white/10 transition-all duration-500 hover:ring-grape/60">
+                    <div className="relative aspect-[3/4] overflow-hidden bg-ink">
+                      {thumb ? (
+                        <img src={thumb} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-plum/40"><ImageOff size={32} className="text-white/30" /></div>
+                      )}
+                      {p.stock <= 0 && (
+                        <div className="absolute left-0 top-0 bg-red-500/90 px-3 py-1.5 font-display text-xs uppercase tracking-widest2 text-white">Agotado</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1 p-5">
+                      <h3 className="font-display text-xl uppercase tracking-widest2 text-white">{p.name}</h3>
+                      <span className="font-display text-lg tracking-wide text-grape">{formatCOP(p.price)}</span>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           </div>
         </div>

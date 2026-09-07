@@ -8,7 +8,7 @@ export const useCart = create((set, get) => ({
   close: () => set({ isOpen: false }),
   toggle: () => set((s) => ({ isOpen: !s.isOpen })),
 
-  add: (product, selectedSize, selectedColor) =>
+  add: (product, selectedSize, selectedColor, selectedImage) =>
     set((state) => {
       const lineId = `${product.id}-${selectedSize}-${selectedColor}`
       const existing = state.items.find((i) => i.lineId === lineId)
@@ -19,6 +19,9 @@ export const useCart = create((set, get) => ({
           ),
         }
       }
+      const img = selectedImage
+        || (product.variants?.[0]?.images?.[0])
+        || (product.images && product.images.length > 0 ? product.images[0] : product.image)
       return {
         items: [
           ...state.items,
@@ -27,7 +30,7 @@ export const useCart = create((set, get) => ({
             id: product.id,
             name: product.name,
             price: product.price,
-            image: (product.images && product.images.length > 0) ? product.images[0] : product.image,
+            image: img,
             selectedSize,
             selectedColor,
             qty: 1,

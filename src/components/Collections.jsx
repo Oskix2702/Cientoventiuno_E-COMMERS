@@ -8,7 +8,9 @@ function ProductCard({ product }) {
   const openProduct = useUI((s) => s.openProduct)
   const [imgError, setImgError] = useState(false)
   const agotado = product.stock <= 0
-  const thumb = (product.images && product.images.length > 0) ? product.images[0] : product.image
+  const thumb = (product.variants && product.variants[0]?.images?.length > 0)
+    ? product.variants[0].images[0]
+    : (product.images && product.images.length > 0) ? product.images[0] : product.image
 
   return (
     <article

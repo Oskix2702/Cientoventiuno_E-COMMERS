@@ -78,7 +78,10 @@ export default function Collections() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+      if (error) {
+        console.error('Error loading products:', error.message)
+      }
       setProducts(data || [])
       setLoading(false)
     }
